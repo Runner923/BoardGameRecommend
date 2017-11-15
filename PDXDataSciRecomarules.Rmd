@@ -1,11 +1,11 @@
 ---
-title: "PDXDataSciReccomender"
+title: "PDXDataSciRecommender"
 author: "Charles Howard"
 date: "November 14, 2017"
-output: html_document
+output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE,cache=TRUE}
 knitr::opts_chunk$set(warning=FALSE, message=FALSE, fig.width=9.5, fig.height=4.5, comment=NA, rows.print=16, out.width = "\\textwidth")
 ```
 
@@ -18,7 +18,7 @@ http://michael.hahsler.net/research/arules_RUG_2015/demo/
 
 R code follows:
 
-```{r prepping_data dat}
+```{r prepping_data dat,include=TRUE,warning=FALSE}
 library(arules)
 library(arulesViz)
 #library(Matrix)  if needed
@@ -46,9 +46,10 @@ translist<-lapply(1:length(userid.ends),function(n){
 datrans<-as(translist,"transactions")
 ```
 
-Each list in translist is a "transaction".  In this instance, a list of gameID's for UserID "1".
-```{r}
-print(translist[[1]])
+Each list in translist is a "transaction".  For instance, the gameID's for the first two UserID's are given below. 
+```{r include=TRUE,echo=FALSE}
+print(paste("UserID ",as.character(dat$UserID[userid.starts][1])," gameID's ",as.character(translist[[1]]),sep=""))
+print(paste("UserID ",as.character(dat$UserID[userid.starts][2])," gameID's ",as.character(translist[[2]]),sep="")) 
 ```
 Summary of the datrans transactions object.
 
@@ -57,26 +58,30 @@ summary(datrans)
 ```
 
 Some standard measures for item lists are support and confidence.  Support is the proportion of a given item list in the data.  Confidence is a conditional probability type measure.  The confidence of item set A => item set B is:
-  support(item set A) <union> support(item set B)/support(item set A)  
+  support(item set A) U support(item set B)/support(item set A)  
 I arbitrarily chose a target of 1000 to arrive at a support value.
 
-```{r trans_support}
+```{r trans_support,include=TRUE, echo=FALSE}
 # find a support level
 sup<-1000/nrow(datrans)
-print(paste("support is ",sup,sep=""))
+print(paste("For a value of 1000 support is ",round(sup,5),". Computed as 1000/nrow(datrans)",sep=""))
+```
+The apriori function takes the transaction object and creates itemlists based on parameters such as support, confidence et al.  Below I have chosen frequent itemsets with a support as calculated above and a minimum length of three.
+
+```{r create_itemsets}
 itemsets <- apriori(datrans, parameter = list(target = "frequent",
                                             supp=sup, minlen = 3))
 inspect(head(sort(itemsets), n=10))
 ```
 
-There's a cool graph method.
+There is a really nice graph plot method in arulesViz.  Following is the graph plot for the top 10 itemsets displayed above.
 
 ```{r support_graph}
 plot(head(sort(itemsets, by = "support"), n=10), method = "graph", control=list(cex=.8))
 
 ```
 
-The first grouping in the table above.
+For extra clarity, some smaller plots.  The first grouping in the table above.
 
 ```{r support_graph2}
 plot(head(sort(itemsets, by = "support"), n=1), method = "graph", control=list(cex=.8))
