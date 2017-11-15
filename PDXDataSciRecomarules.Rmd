@@ -1,0 +1,95 @@
+---
+title: "PDXDataSciReccomender"
+author: "Charles Howard"
+date: "November 14, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, fig.width=9.5, fig.height=4.5, comment=NA, rows.print=16, out.width = "\\textwidth")
+```
+
+## Overview
+
+The goal is to build a recommendation engine for games.  The R package arules is used to mine associations between lists of items.  The arulesViz package has plot methods to visualize relationships between items.
+
+I started with the original set of 834415 rows and 3 columns.  The arules package requires nominal variables be converted to factors and continuous variables to be discretized.  I followed examples given in the following webpage:
+http://michael.hahsler.net/research/arules_RUG_2015/demo/
+
+R code follows:
+
+```{r prepping_data dat}
+library(arules)
+library(arulesViz)
+#library(Matrix)  if needed
+datdir<-"C:/Users/Charles/Documents/PDXDataSciRecommender/"
+setwd(datdir)
+dat<-read.csv(paste(datdir,"boardgame-ratings.csv",sep=""))
+# sorting data by 1.) UserId, then 2.) gameID
+dat<-dat[order(dat$UserID,dat$gameID),]
+# determining groupings by UserID
+usergrping<-grouping(dat$UserID)
+userid.ends<-attr(usergrping,"ends")
+userid.starts<-c(1,userid.ends[1:(length(userid.ends)-1)]+1)
+userid.counts<-diff(userid.starts)
+# convert to factors
+dat[,"UserID"]<-factor(dat[,"UserID"])
+dat[,"gameID"]<-factor(dat[,"gameID"])
+# discretize ratings
+dat[,"rating"]<-discretize(dat$rating,method="interval",categories=5)
+# for first attempt, I create a list of gameID's by UserID
+translist<-lapply(1:length(userid.ends),function(n){
+  rws<-userid.starts[n]:userid.ends[n]
+  x<-dat$gameID[rws]
+})
+# the transaction class is the primary one used for arules
+datrans<-as(translist,"transactions")
+```
+
+Each list in translist is a "transaction".  In this instance, a list of gameID's for UserID "1".
+```{r}
+print(translist[[1]])
+```
+Summary of the datrans transactions object.
+
+```{r}
+summary(datrans)
+```
+
+Some standard measures for item lists are support and confidence.  Support is the proportion of a given item list in the data.  Confidence is a conditional probability type measure.  The confidence of item set A => item set B is:
+  support(item set A) <union> support(item set B)/support(item set A)  
+I arbitrarily chose a target of 1000 to arrive at a support value.
+
+```{r trans_support}
+# find a support level
+sup<-1000/nrow(datrans)
+print(paste("support is ",sup,sep=""))
+itemsets <- apriori(datrans, parameter = list(target = "frequent",
+                                            supp=sup, minlen = 3))
+inspect(head(sort(itemsets), n=10))
+```
+
+There's a cool graph method.
+
+```{r support_graph}
+plot(head(sort(itemsets, by = "support"), n=10), method = "graph", control=list(cex=.8))
+
+```
+
+The first grouping in the table above.
+
+```{r support_graph2}
+plot(head(sort(itemsets, by = "support"), n=1), method = "graph", control=list(cex=.8))
+
+```
+The first and second groupings in the table above.
+
+```{r support_graph3}
+plot(head(sort(itemsets, by = "support"), n=2), method = "graph", control=list(cex=.8))
+
+```
+...and so on...
+```{r support_graph4}
+plot(head(sort(itemsets, by = "support"), n=3), method = "graph", control=list(cex=.8))
+
+```
